@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: recoveryplane
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-demo-password}
+      POSTGRES_DB: recoveryplane
+    volumes:
+      - recoveryplane-db:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U recoveryplane]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgresql://recoveryplane:${POSTGRES_PASSWORD:-local-demo-password}@postgres:5432/recoveryplane
+      HOST: 0.0.0.0
+      DEMO_MODE: ${DEMO_MODE:-true}
+      ALLOW_PUBLIC_DEMO: "true"
+      ACCESS_TOKENS_JSON: ${ACCESS_TOKENS_JSON:-[]}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    init: true
+    stop_grace_period: 120s
+volumes:
+  recoveryplane-db:

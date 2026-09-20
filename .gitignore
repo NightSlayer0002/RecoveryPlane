@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.data/
+.turbo/
+coverage/
+*.log
+*.tsbuildinfo
+*.timestamp-*.mjs
+.superpowers/
+
+# Local founder material and machine-specific publishing instructions
+RECOVERYPLANE_COFOUNDER_NOTES.txt
+GITHUB_PUBLISH_STEPS.txt
+# Local editor/OS files and credential exports
+.DS_Store
+Thumbs.db
+*.pem
+*.key

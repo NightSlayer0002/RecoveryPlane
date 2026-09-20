@@ -1,0 +1,40 @@
+{
+  "name": "recoveryplane",
+  "private": true,
+  "packageManager": "pnpm@9.1.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @recoveryplane/contracts build && node scripts/dev.mjs",
+    "start": "pnpm --filter @recoveryplane/contracts build && tsx apps/api/src/main.ts",
+    "worker": "tsx apps/worker/src/main.ts",
+    "build": "pnpm --filter @recoveryplane/contracts build && pnpm typecheck && pnpm --filter @recoveryplane/sdk build && pnpm --filter @recoveryplane/web build",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm --filter @recoveryplane/contracts build && tsx --test --test-concurrency=1 tests/*.test.ts",
+    "test:postgres": "tsx --test --test-concurrency=1 tests/domain.test.ts tests/http.test.ts",
+    "token:create": "node scripts/token.mjs"
+  },
+  "devDependencies": {
+    "@types/express": "4",
+    "@types/node": "22",
+    "@types/pg": "^8.23.1",
+    "prettier": "^3.3.3",
+    "tsx": "^4.23.13",
+    "typescript": "5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "dotenv": "^16.4.5",
+    "express": "4",
+    "pg": "^8.23.0",
+    "zod": "3"
+  },
+  "type": "module"
+}

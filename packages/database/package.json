@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "version": "0.1.0",
+  "exports": "./src/store.ts",
+  "name": "@recoveryplane/database",
+  "type": "module"
+}

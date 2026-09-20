@@ -1,0 +1,21 @@
+// Idempotent baseline migration. Future schema changes require numbered migrations.
+export const schema = [
+  `CREATE TABLE IF NOT EXISTS rp_tenants (id text PRIMARY KEY, name text NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS rp_integrations (id text PRIMARY KEY, org_id text NOT NULL REFERENCES rp_tenants(id), data jsonb NOT NULL, reporting_hash text NOT NULL UNIQUE, secret text NOT NULL, UNIQUE(id,org_id))`,
+  `CREATE TABLE IF NOT EXISTS rp_actions (id text PRIMARY KEY, org_id text NOT NULL, integration_id text NOT NULL, action_key text NOT NULL, version integer NOT NULL, enabled boolean NOT NULL DEFAULT true, data jsonb NOT NULL, FOREIGN KEY(integration_id,org_id) REFERENCES rp_integrations(id,org_id), UNIQUE(integration_id,action_key,version), UNIQUE(id,integration_id,org_id))`,
+  `CREATE TABLE IF NOT EXISTS rp_cases (id text PRIMARY KEY, org_id text NOT NULL, integration_id text NOT NULL, correlation_key text NOT NULL, fingerprint text NOT NULL, status text NOT NULL DEFAULT 'OPEN', version integer NOT NULL DEFAULT 1, data jsonb NOT NULL, FOREIGN KEY(integration_id,org_id) REFERENCES rp_integrations(id,org_id), UNIQUE(id,integration_id,org_id))`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS rp_open_correlation ON rp_cases(integration_id,correlation_key) WHERE status='OPEN'`,
+  `CREATE INDEX IF NOT EXISTS rp_case_tenant ON rp_cases(org_id,status)`,
+  `CREATE TABLE IF NOT EXISTS rp_occurrences (id text PRIMARY KEY, org_id text NOT NULL, integration_id text NOT NULL, case_id text NOT NULL, idempotency_key text NOT NULL, payload_hash text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), FOREIGN KEY(case_id,integration_id,org_id) REFERENCES rp_cases(id,integration_id,org_id), UNIQUE(integration_id,idempotency_key))`,
+  `CREATE TABLE IF NOT EXISTS rp_case_actions (case_id text NOT NULL, action_id text NOT NULL, integration_id text NOT NULL, org_id text NOT NULL, PRIMARY KEY(case_id,action_id), FOREIGN KEY(case_id,integration_id,org_id) REFERENCES rp_cases(id,integration_id,org_id), FOREIGN KEY(action_id,integration_id,org_id) REFERENCES rp_actions(id,integration_id,org_id))`,
+  `CREATE TABLE IF NOT EXISTS rp_commands (id text PRIMARY KEY, org_id text NOT NULL, integration_id text NOT NULL, case_id text NOT NULL, action_id text NOT NULL, idempotency_key text NOT NULL, payload_hash text NOT NULL, status text NOT NULL, data jsonb NOT NULL, result jsonb, FOREIGN KEY(case_id,integration_id,org_id) REFERENCES rp_cases(id,integration_id,org_id), FOREIGN KEY(action_id,integration_id,org_id) REFERENCES rp_actions(id,integration_id,org_id), UNIQUE(case_id,idempotency_key))`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS rp_one_active_command ON rp_commands(case_id) WHERE status IN ('QUEUED','AWAITING_CONFIRMATION','OUTCOME_UNKNOWN')`,
+  `CREATE TABLE IF NOT EXISTS rp_outbox (command_id text PRIMARY KEY REFERENCES rp_commands(id), available_at timestamptz NOT NULL DEFAULT now(), lease_token text, lease_until timestamptz, attempts integer NOT NULL DEFAULT 0, done boolean NOT NULL DEFAULT false)`,
+  `CREATE INDEX IF NOT EXISTS rp_outbox_due ON rp_outbox(available_at) WHERE done=false`,
+  `CREATE TABLE IF NOT EXISTS rp_deliveries (id text PRIMARY KEY, command_id text NOT NULL REFERENCES rp_commands(id), data jsonb NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS rp_audit (id text PRIMARY KEY, org_id text NOT NULL REFERENCES rp_tenants(id), case_id text REFERENCES rp_cases(id), data jsonb NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS rp_audit_case ON rp_audit(case_id)`,
+  `CREATE OR REPLACE FUNCTION rp_prevent_audit_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Audit events are append-only'; END $$`,
+  `DROP TRIGGER IF EXISTS rp_audit_immutable ON rp_audit`,
+  `CREATE TRIGGER rp_audit_immutable BEFORE UPDATE OR DELETE ON rp_audit FOR EACH ROW EXECUTE FUNCTION rp_prevent_audit_mutation()`,
+];
