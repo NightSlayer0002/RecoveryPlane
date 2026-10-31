@@ -19,3 +19,15 @@ GITHUB_PUBLISH_STEPS.txt
 Thumbs.db
 *.pem
 *.key
+
+# Local development handoffs and personal preparation
+docs/frontend-brief.md
+docs/frontend-report.md
+docs/motion-brief.md
+docs/motion-report.md
+docs/superpowers/plans/2026-09-19-recoveryplane.md
+docs/review-findings.md
+docs/VERIFICATION.md
+*INTERVIEW*.txt
+*interview-kit*
+
